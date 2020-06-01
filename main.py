@@ -15,6 +15,7 @@ from __future__ import print_function
 import argparse
 import os
 import re
+
 import boto3
 
 REGION = None
@@ -22,12 +23,15 @@ DRYRUN = None
 IMAGES_TO_KEEP = None
 IGNORE_TAGS_REGEX = None
 
+REPO_NAMES = []
+
 
 def initialize():
     global REGION
     global DRYRUN
     global IMAGES_TO_KEEP
     global IGNORE_TAGS_REGEX
+    global REPO_NAMES
 
     REGION = os.environ.get('REGION', "None")
     DRYRUN = os.environ.get('DRYRUN', "false").lower()
@@ -37,6 +41,8 @@ def initialize():
         DRYRUN = True
     IMAGES_TO_KEEP = int(os.environ.get('IMAGES_TO_KEEP', 100))
     IGNORE_TAGS_REGEX = os.environ.get('IGNORE_TAGS_REGEX', "^$")
+    REPO_NAMES = [v.strip() for v in os.environ.get('REPO_NAMES', '').split(',')]
+
 
 def handler(event, context):
     initialize()
@@ -88,6 +94,8 @@ def discover_delete_images(regionname):
         print(image)
 
     for repository in repositories:
+        if repository['repositoryName'] not in REPO_NAMES: continue
+
         print("------------------------")
         print("Starting with repository :" + repository['repositoryUri'])
         deletesha = []
@@ -190,10 +198,13 @@ if __name__ == '__main__':
     PARSER = argparse.ArgumentParser(description='Deletes stale ECR images')
     PARSER.add_argument('-dryrun', help='Prints the repository to be deleted without deleting them', default='true',
                         action='store', dest='dryrun')
+    PARSER.add_argument('-repo_names', help='target repository names separate by comma', required=True, action='store',
+                        dest='repo_names')
     PARSER.add_argument('-imagestokeep', help='Number of image tags to keep', default='100', action='store',
                         dest='imagestokeep')
     PARSER.add_argument('-region', help='ECR/ECS region', default=None, action='store', dest='region')
-    PARSER.add_argument('-ignoretagsregex', help='Regex of tag names to ignore', default="^$", action='store', dest='ignoretagsregex')
+    PARSER.add_argument('-ignoretagsregex', help='Regex of tag names to ignore', default="^$", action='store',
+                        dest='ignoretagsregex')
 
     ARGS = PARSER.parse_args()
     if ARGS.region:
@@ -203,4 +214,5 @@ if __name__ == '__main__':
     os.environ["DRYRUN"] = ARGS.dryrun.lower()
     os.environ["IMAGES_TO_KEEP"] = ARGS.imagestokeep
     os.environ["IGNORE_TAGS_REGEX"] = ARGS.ignoretagsregex
+    os.environ["REPO_NAMES"] = ARGS.repo_names
     handler(REQUEST, None)
