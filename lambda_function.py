@@ -55,6 +55,14 @@ def handler(event, context):
         discover_delete_images(REGION)
 
 
+def lambda_handler(*args, **kwargs):
+    return handler(*args, **kwargs)
+
+
+def lambda_handler(*args, **kwargs):
+    return handler(*args, **kwargs)
+
+
 def discover_delete_images(regionname):
     print("Discovering images in " + regionname)
     ecr_client = boto3.client('ecr', region_name=regionname)
